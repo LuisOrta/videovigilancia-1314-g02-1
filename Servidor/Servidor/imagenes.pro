@@ -29,3 +29,38 @@ FORMS    += mainwindow.ui \
     acercade.ui \
     selcamara.ui \
     selport.ui
+
+unix{          # Esta configuración específica de Linux y UNIX
+    # Variables
+    #
+    isEmpty(PREFIX) {
+        PREFIX = /usr/local
+    }
+    MOC_DIR = ./moc
+    OBJECTS_DIR = ./obj
+    BINDIR  = $$PREFIX/bin
+    DATADIR = $$PREFIX/share
+    CONFDIR = /etc/xdg
+
+    isEmpty(VARDIR) {
+        VARDIR  = /var/lib/$${TARGET}
+    }
+    DEFINES += APP_DATADIR=\\\"$$DATADIR\\\"
+    DEFINES += APP_VARDIR=\\\"$$VARDIR\\\"
+    DEFINES += APP_CONFFILE=\\\"$$CONFDIR/ficheroServer.ini\\\"
+    # Install
+    #
+    INSTALLS += target config vardir
+
+    ## Instalar ejecutable
+    target.path = $$BINDIR
+
+    ## Instalar archivo de configuración
+    config.path = $$CONFDIR
+    config.files += ficheroServer.ini
+
+    ## Crear directorio de archivos variables
+    vardir.path = $$VARDIR
+    vardir.commands = :
+}
+

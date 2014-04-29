@@ -9,7 +9,7 @@ SelCamara::SelCamara(QWidget *parent) :
     ui(new Ui::SelCamara)
 {
     ui->setupUi(this);
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
 
     devices = QCamera::availableDevices();
 
@@ -27,7 +27,7 @@ SelCamara::~SelCamara()
 
 void SelCamara::on_BotonSel_clicked()
 {
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     sett.setValue("Camera", ui->comboBox->currentText());
     this->close();
 }

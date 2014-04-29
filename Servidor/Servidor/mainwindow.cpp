@@ -114,11 +114,9 @@ void MainWindow::escucha()
 void MainWindow::leerDatos()
 {
     int cerrar = 202;
-<<<<<<< HEAD
+
     int corrupt = 203;
 
-=======
->>>>>>> bdca955b59030d2ba5bc466a529879f29aa4b096
     qDebug() << "LEYENDO DATOS!";
     while(buffsize == 0 && clientConnection->bytesAvailable()>=4){
         if (buffsize == 0){

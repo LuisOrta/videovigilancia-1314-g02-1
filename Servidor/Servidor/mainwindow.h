@@ -31,10 +31,6 @@ public:
     int corrupt_counter;
     QByteArray readbuffer;
     QImage imagebuff;
-<<<<<<< HEAD
-=======
-
->>>>>>> bdca955b59030d2ba5bc466a529879f29aa4b096
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -43,17 +39,8 @@ private slots:
 
     void on_actionAcerca_de_triggered();
 
-<<<<<<< HEAD
     void on_checkBox_clicked();
 
-=======
-    void on_checkBox_clicked(bool checked);
-
-    void on_checkBox_clicked();
-
-    void on_Pause_clicked();
-
->>>>>>> bdca955b59030d2ba5bc466a529879f29aa4b096
     void showFrame(const QImage &rect);
 
     void escucha();

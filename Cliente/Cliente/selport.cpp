@@ -19,7 +19,7 @@ void selport::on_pushButton_clicked()
 {
     QString ip = ui->textEdit->toPlainText();
     QString port = ui->textEdit_2->toPlainText();
-    QSettings sett;
+    QSettings sett("ficheroCliente.ini", QSettings::IniFormat);
     sett.setValue("IPServer", ip);
     sett.setValue("IPPort", port);
     this->close();
