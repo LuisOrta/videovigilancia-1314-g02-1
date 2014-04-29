@@ -17,7 +17,7 @@ selport::~selport()
 void selport::on_pushButton_clicked()
 {
     QString port = ui->textEdit->toPlainText();
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     sett.setValue("IPPort", port);
     this->close();
 }
