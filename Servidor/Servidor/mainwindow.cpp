@@ -15,6 +15,7 @@
 #include "selcamara.h"
 #include "QBuffer"
 #include "selport.h"
+#include "QtEndian"
 
 #define VERSION 1
 
@@ -113,15 +114,15 @@ void MainWindow::escucha()
 
 void MainWindow::leerDatos()
 {
-    int cerrar = 202;
-
-    int corrupt = 203;
+    u_int32_t cerrar = 202;
+    u_int32_t corrupt = 203;
 
     qDebug() << "LEYENDO DATOS!";
     while(buffsize == 0 && clientConnection->bytesAvailable()>=4){
         if (buffsize == 0){
             if (clientConnection->bytesAvailable()>=4){
-                clientConnection->read(reinterpret_cast<char*>(&buffsize), 4);
+                clientConnection->read(reinterpret_cast<char*>(&buffsize), sizeof(buffsize));
+                buffsize = qToLittleEndian(buffsize);
                 qDebug() << "LEYENDO TAMAÑO!";
                 qDebug() << buffsize;
             }
@@ -132,7 +133,8 @@ void MainWindow::leerDatos()
          }
 
         if (clientConnection->bytesAvailable()>=4){
-            clientConnection->read(reinterpret_cast<char*>(&protocol_version), 4);
+            clientConnection->read(reinterpret_cast<char*>(&protocol_version), sizeof(protocol_version));
+            protocol_version = qToLittleEndian(protocol_version);
             qDebug() << "VERSION!";
             qDebug() << protocol_version;
             if (protocol_version != VERSION){
@@ -141,7 +143,6 @@ void MainWindow::leerDatos()
             }
 
         }
-
 
 
         while(readbuffer.length() < buffsize && clientConnection->bytesAvailable()>0){
@@ -167,11 +168,11 @@ void MainWindow::leerDatos()
                  }
 
                  if (corrupt_counter >=20){
-<<<<<<< HEAD
+
                      clientConnection->write(reinterpret_cast<char*>(&corrupt), 4);
-=======
+
                      clientConnection->write(reinterpret_cast<char*>(&cerrar), 4);
->>>>>>> bdca955b59030d2ba5bc466a529879f29aa4b096
+
                      clientConnection->disconnectFromHost();
                  }*/
 

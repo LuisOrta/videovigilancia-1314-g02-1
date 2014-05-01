@@ -26,8 +26,8 @@ public:
     bool isInicio;
     QTcpServer *server;
     QTcpSocket *clientConnection;
-    int buffsize;
-    int protocol_version;
+    u_int32_t buffsize;
+    u_int32_t protocol_version;
     int corrupt_counter;
     QByteArray readbuffer;
     QImage imagebuff;
