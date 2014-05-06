@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
     server(NULL),
     clientConnection(NULL)
 {
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     ui->setupUi(this);
     ui->checkBox->setChecked(sett.value("Autorun", true).toBool());
 
@@ -70,7 +70,7 @@ void MainWindow::on_actionAbrir_triggered()
 
 void MainWindow::on_checkBox_clicked()
 {
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     sett.setValue("Autorun", ui->checkBox->isChecked());
 }
 
@@ -193,7 +193,7 @@ void MainWindow::on_actionSeleccionar_Camara_triggered()
 
 void MainWindow::on_actionSeleccionar_puerto_triggered()
 {
-    QSettings sett;
+    QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     selport sel;
     sel.exec();
     server->close();

@@ -34,11 +34,7 @@ private slots:
 
     void on_actionAcerca_de_triggered();
 
-    void on_checkBox_clicked(bool checked);
-
     void on_checkBox_clicked();
-
-    void on_Pause_clicked();
 
     void showFrame(const QImage &rect);
 

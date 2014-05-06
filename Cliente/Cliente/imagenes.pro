@@ -52,7 +52,7 @@ unix {          # Esta configuración específica de Linux y UNIX
 
     # Install
     #
-    INSTALLS += target config vardir
+    INSTALLS += target config
 
     ## Instalar ejecutable
     target.path = $$BINDIR
@@ -60,8 +60,4 @@ unix {          # Esta configuración específica de Linux y UNIX
     ## Instalar archivo de configuración
     config.path = $$CONFDIR
     config.files += ficheroCliente.ini
-
-    ## Crear directorio de archivos variables
-    vardir.path = $$VARDIR
-    vardir.commands = :
 }

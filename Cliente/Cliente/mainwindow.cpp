@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow),
     socket(NULL)
 {
-    QSettings sett;
+    QSettings sett("ficheroCliente.ini", QSettings::IniFormat);
     ui->setupUi(this);
     ui->checkBox->setChecked(sett.value("Autorun", true).toBool());
 
@@ -69,7 +69,7 @@ void MainWindow::on_actionAbrir_triggered()
 
 void MainWindow::on_checkBox_clicked()
 {
-    QSettings sett;
+    QSettings sett("ficheroCliente.ini", QSettings::IniFormat);
     sett.setValue("Autorun", ui->checkBox->isChecked());
 }
 
@@ -116,7 +116,7 @@ void MainWindow::showFrame(const QImage& rect)
 
 void MainWindow::on_actionCapturar_desde_WebCam_triggered()
 {
-    QSettings sett;
+    QSettings sett("ficheroCliente.ini", QSettings::IniFormat);
     qDebug() << sett.value("IPServer", "127.0.0.1").toString();
     socket->connectToHost(sett.value("IPServer", "127.0.0.1").toString(),sett.value("IPPort", 15000).toInt());
 
