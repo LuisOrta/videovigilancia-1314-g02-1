@@ -2,58 +2,124 @@
 
 
 
-Captura::Captura(const QList<QByteArray> &lista_camaras,QTcpSocket *socket,QObject *parent):
+Captura::Captura(QObject *parent):
     QObject(parent),
     cam_(NULL),
-    socket_(socket),
-    dispositivos_(lista_camaras),
-    buffer_(NULL)
+    socket_(NULL),
+    handle_(NULL),
+    buffer_(NULL){
+    socket_ = new QTcpSocket(this);
+    qtout_ = new QTextStream(stdout,QIODevice::WriteOnly);
+    buffer_ = new Captura_Buffer;
+    handle_ = new Manejador(this);
+
+    signal(SIGINT,Manejador::intSignalHandler);
+    signal(SIGHUP,Manejador::hupSignalHandler);
+    signal(SIGTERM,Manejador::termSignalHandler);
+
+    dispositivos_ =  QCamera::availableDevices();
+    connect(handle_,SIGNAL(terminar()),this,SLOT(terminar_captura()));
+    connect(socket_,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(displayError(QAbstractSocket::SocketError)));
+    connect(buffer_, SIGNAL(mostrar_marco(QImage)), this, SLOT(showFrame(const QImage&)));
+}
+Captura::~Captura(){
+
+   delete socket_;
+   delete  cam_;
+   delete  buffer_;
+   delete  qtout_;
+   delete handle_;
+
+   handle_ = NULL;
+   qtout_ = NULL;
+   cam_ = NULL;
+   buffer_ = NULL;
+   socket_ = NULL;
+}
+void Captura::displayError(QAbstractSocket::SocketError socketError)
 {
-    int i = 0;
-    bool encontrado = false;
-    for( ; i<lista_camaras.length() && encontrado == false;i++){
+    *qtout_ << "------------------------------------------" << endl;
+    *qtout_ << "- ADVERTENCIA - SE HA PRODUCIDO UN ERROR -" << endl;
+    *qtout_ << "------------------------------------------" << endl;
 
-        if(lista_camaras[i] == conf_.value("Camera", "/dev/video0")){
-           encontrado = true;
-        }
+   switch (socketError) {
+    case QAbstractSocket::RemoteHostClosedError:
+       {
+         *qtout_ << "Se ha cerrado la conexion con el host remoto" << endl;
+            if(cam_ != NULL && cam_->ActiveStatus == 8)
+            {
+                    cam_->stop();
+                    socket_->abort();
+            }
+            break;
+       }
+    case QAbstractSocket::HostNotFoundError:
+        *qtout_ << "El host no se ha encontrado. Por favor, revise la dirección del host y el puerto en la configuración." << endl;
+         emit mostrar_menu_general();
+         break;
 
+    case QAbstractSocket::ConnectionRefusedError:
+        *qtout_ << " No se ha podido establecer la conexion " << endl;
+         emit mostrar_menu_general();
+        break;
+    default:
+        *qtout_ << " Ha ocurrido el siguiente error " << socket_->errorString() <<endl;
+         emit mostrar_menu_general();
+         if(cam_ != NULL && cam_->ActiveState == 8)
+         {
+             cam_->stop();
+         }
     }
-    i = i-1;
-    if (encontrado == true)
-    {
-       cam_ = new QCamera(lista_camaras[i]);
-       buffer_ = new Captura_Buffer;
-       cam_->setViewfinder(buffer_);
-       cam_->setCaptureMode(QCamera::CaptureViewfinder);
-       connect(buffer_, SIGNAL(mostrar_marco(QImage)), this, SLOT(showFrame(const QImage&)));
-    }
+   *qtout_ << "\n";
 
 }
- Captura::~Captura(){
 
+void Captura::empezar_captura (const QString &ip,const QString &puerto,const QString &dispositivo_sel)
+{
 
-    if (cam_ != NULL)
-    {
-        if(cam_->state() == QCamera::ActiveState)
+        this->socket_->connectToHost(ip,puerto.toUInt());
+        if(socket_->waitForConnected()==true)
         {
-            cam_->stop();
-        }
-    }
+            if(socket_->state() == QTcpSocket::ConnectedState)
+            {
+                int i = 0;
+                bool encontrado = false;
+                for( ; i<dispositivos_.length() && encontrado == false;i++){
+
+                    if(dispositivos_[i] == dispositivo_sel){
+                       encontrado = true;
+                    }
+
+                }
+                i = i-1;
+                if (encontrado == true)
+                {
+
+                       if(cam_ != NULL && cam_->ActiveStatus == 8)
+                       {
+                            cam_->stop();
+                            delete cam_;
+                           cam_ = NULL;
+                        }
+                        cam_ = new QCamera(dispositivos_[i]);
+                        if(cam_ != NULL)
+                        {
+                            cam_->setViewfinder(buffer_);
+                            cam_->setCaptureMode(QCamera::CaptureViewfinder);
+                            cam_->start();
+                        }
+                       else
+                        {
+                               *qtout_ << " ERROR: No se ha podido asignar memoria a la camara " << endl;
+                               mostrar_menu_general();
+                        }
 
 
-    delete  cam_;
-    delete  buffer_;
+                }
+            }
+         }
 
-    cam_ = NULL;
-    buffer_ = NULL;
-}
 
-void Captura::empezar_capturar(void)
-{
-    if (this->socket_->state() == 3)
-    {
-        cam_->start();
-    }
 }
 
 
@@ -70,9 +136,32 @@ void Captura::showFrame(const QImage& rect)
        writer.setCompression(70);
        writer.write(rect);
        int size = buffer.data().size();
-       socket_->write(reinterpret_cast<char*>(&size), 4);
-       socket_->write(reinterpret_cast<char*>(&version), 4);
-       socket_->write(buffer.data());
+        if (socket_->isValid())
+        {
+            socket_->write(reinterpret_cast<char*>(&size), 4);
+            socket_->write(reinterpret_cast<char*>(&version), 4);
+            socket_->write(buffer.data());
+         }
 
  }
+void  Captura::terminar_captura(void)
+{
 
+        if(socket_ != NULL)
+        {
+            if(socket_->state() == QTcpSocket::ConnectedState || socket_->state() == QTcpSocket::ConnectingState)
+             {
+                if(cam_->ActiveStatus == 8)
+                {
+                    cam_->stop();
+                    socket_->abort();
+
+                        emit captura_terminada();
+
+                }
+
+            }
+            emit mostrar_menu_general();
+
+        }
+}

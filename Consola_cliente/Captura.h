@@ -7,10 +7,12 @@
 #include "Manejador.h"
 #include <QByteArray>
 #include <QSettings>
-#include <QPixmap>
 #include <QBuffer>
 #include <QImageWriter>
 #include <QTcpSocket>
+#include <QTextStream>
+#include <QHostAddress>
+#include <Manejador.h>
 
 class Captura : public QObject
 {
@@ -18,24 +20,34 @@ class Captura : public QObject
 
 
 public:
-    explicit Captura(const QList<QByteArray> &lista_camaras,QTcpSocket *socket =0,QObject *parent = 0);
+
+    explicit Captura(QObject *parent = 0);
     virtual ~Captura(void);
+
+
+signals:
+
+    void mostrar_menu_general(void);
+    void captura_terminada(void);
 
 public slots:
 
-    void empezar_capturar(void);
-
+    void displayError(QAbstractSocket::SocketError socketError);
+    void empezar_captura (const QString &ip,const QString &puerto,const QString &dispositivo_sel = NULL);
+    void terminar_captura(void);
 
 private slots:
 
     void showFrame(const QImage &rect);
+
 
  private:
 
     QCamera *cam_;
     Captura_Buffer *buffer_;
     QTcpSocket *socket_;
-
+    QTextStream *qtout_;
+    Manejador *handle_;
     QSettings conf_;
     QList<QByteArray>  dispositivos_;
 

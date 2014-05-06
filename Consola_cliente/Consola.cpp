@@ -1,65 +1,41 @@
 #include "Consola.h"
 
-Consola::Consola(QObject *parent):
+Consola::Consola(Captura *Objeto_Capturador,QObject *parent):
     QObject(parent),
     qtout_(NULL),
-    qtin_(NULL),
-    hilo_captura_(NULL),
-    objeto_captura_(NULL),
-    socket_(NULL)
+    objeto_capturador_(Objeto_Capturador),
+    qtin_(NULL)
 {
     qtout_ = new QTextStream(stdout,QIODevice::WriteOnly);
     qtin_ = new QTextStream(stdin,QIODevice::ReadOnly);
+
     ip_ = conf_.value("Visor/ip","127.0.0.1").toString();
     puerto_ = conf_.value("Visor/puerto","15000").toString();
-    socket_ = new QTcpSocket(this);
-    dispositivos_ =  QCamera::availableDevices();
-    hilo_captura_ = new QThread(this);
-    handle_ = new Manejador(this);
-     connect(socket_, SIGNAL(error(QAbstractSocket::SocketError)),
-                 this, SLOT(displayError(QAbstractSocket::SocketError)));
+    dispositivo_sel_= conf_.value("Visor/camera").toString();
+    dispositivos_=QCamera::availableDevices();
 
 
-     signal(SIGINT,Manejador::intSignalHandler);
-     signal(SIGHUP,Manejador::hupSignalHandler);
-     signal(SIGTERM,Manejador::termSignalHandler);
-
-     connect(handle_,SIGNAL(terminar()),this,SLOT(cerrar_objetos()));
+     connect(objeto_capturador_,SIGNAL(captura_terminada()),this,SLOT(mostrar_menu()));
+     connect(objeto_capturador_,SIGNAL(mostrar_menu_general()),this,SLOT(mostrar_menu()));
+     connect(this,SIGNAL(empezar_captura(QString,QString,QString)),objeto_capturador_,SLOT(empezar_captura(QString,QString,QString)));
+     connect(this,SIGNAL(empezar_captura(QString,QString)),objeto_capturador_,SLOT(empezar_captura(QString,QString)));
 
      *qtout_ << " SIN PROBLEMAS " << endl;
      qtout_->flush();
-     mostrar_menu();
+
 
 
 }
 Consola::~Consola()
 {
-    if (hilo_captura_ != NULL)
-    {
-        if (hilo_captura_->isRunning())
-        {
-            hilo_captura_->quit();
-            hilo_captura_->wait();
-        }
-    }
     qtout_->flush();
     qtin_ ->flush();
 
-    delete  socket_;
     delete  qtout_;
     delete  qtin_;
-    delete  hilo_captura_;
-    delete  objeto_captura_;
-    delete  handle_;
-
-
 
     qtout_ = NULL;
     qtin_ = NULL;
-    socket_ = NULL;
-    hilo_captura_ = NULL;
-    objeto_captura_= NULL;
-    handle_ = NULL;
 }
 
 
@@ -87,7 +63,8 @@ void Consola::mostrar_menu(void)
 
      *qtout_<< "  \n\n Por favor, seleccione una de las opciones " << endl;
 
-     eleccion_ = qtin_->readLine();
+
+    eleccion_ = qtin_->readLine();
 
      if(eleccion_[0] !='1' && eleccion_[0] != '2' && eleccion_[0] !='3' && eleccion_[0] != 'c' && eleccion_[0] != 'C')
      {
@@ -246,45 +223,7 @@ void Consola::mostrar_menu_configuracion_dispositivo_video(void)
 
 }
 
-void Consola::displayError(QAbstractSocket::SocketError socketError)
-{
-    *qtout_ << "------------------------------------------" << endl;
-    *qtout_ << "- ADVERTENCIA - SE HA PRODUCIDO UN ERROR -" << endl;
-    *qtout_ << "------------------------------------------" << endl;
 
-   switch (socketError) {
-    case QAbstractSocket::RemoteHostClosedError:
-
-        *qtout_ << "Se ha cerrado la conexion con el host remoto" << endl;
-        // Si se cae la conexión espero a que se terminen de procesar los mensajes de hilo y elimino el objeto capturar lo que implica cerrar el socket
-       break;
-    case QAbstractSocket::HostNotFoundError:
-
-        *qtout_ << "El host no se ha encontrado. Por favor, revise la dirección del host y el puerto en la configuración." << endl;
-        break;
-
-    case QAbstractSocket::ConnectionRefusedError:
-        *qtout_ << " No se ha podido establecer la conexion " << endl;
-        break;
-    default:
-        *qtout_ << " Ha ocurrido el siguiente error " << socket_->errorString() <<endl;
-    }
-
-
-   if(hilo_captura_->isRunning())
-   {
-
-       hilo_captura_->quit();
-       hilo_captura_->wait();
-
-   }
-   socket_->abort();
-   *qtout_ << "\n";
-   qtout_->flush();
-   mostrar_menu_capturar();
-
-
-}
 void Consola::mostrar_menu_capturar(void)
 {
 
@@ -305,25 +244,8 @@ void Consola::mostrar_menu_capturar(void)
 
     if (eleccion_[0] == '1')
     {
-
-            socket_->connectToHost(ip_,puerto_.toInt());
-            if(socket_->waitForConnected() == true)
-            {
-                if(socket_->state() == 3)
-                 {
-                    //qRegisterMetaType< QList<QByteArray> >("QList<QByteArray>");
-                    objeto_captura_ = new Captura(dispositivos_,socket_);
-                    objeto_captura_->moveToThread(hilo_captura_);
-                    if(!hilo_captura_->isRunning())
-                    {
-                        hilo_captura_->start();
-                    }
-                    connect( hilo_captura_, SIGNAL(started()),objeto_captura_, SLOT(empezar_capturar()) );
-                    connect( hilo_captura_, SIGNAL(finished()),objeto_captura_, SLOT(deleteLater()) );
-                }
-            }
-
-
+        emit empezar_captura(ip_,puerto_,dispositivo_sel_);
+       // mostrar_menu_capturar();
     }
     else if (eleccion_[0] == 'V' || eleccion_[0] == 'v')
     {
@@ -335,15 +257,5 @@ void Consola::mostrar_menu_capturar(void)
     }
 
 }
-void Consola::cerrar_objetos(void)
-{
-    if(hilo_captura_->isRunning())
-    {
-        hilo_captura_->quit();
-        hilo_captura_->wait();
-    }
 
-    socket_->abort();
-    mostrar_menu();
-}
 

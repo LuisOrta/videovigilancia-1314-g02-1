@@ -7,44 +7,35 @@
 #include <QSettings>
 #include <QCamera>
 #include <QByteArray>
-#include <QTcpSocket>
-#include <QWaitCondition>
-#include <QDebug>
 #include "Captura.h"
-#include "captura_buffer.h"
-#include "Manejador.h"
-#include <QThread>
 
 class Consola : public QObject
 {
     Q_OBJECT
+
 public:
-    explicit Consola(QObject *parent = 0);
+    explicit Consola(Captura *Objeto_Capturador =NULL,QObject *parent = 0);
     ~Consola();
+
+public slots:
 
     void mostrar_menu(void);
 
-private slots:
+signals:
 
-    void displayError(QAbstractSocket::SocketError socketError);
-    void cerrar_objetos(void);
-
+    void empezar_captura (const QString &ip,const QString &puerto,const QString &dispositivo_sel = NULL);
 
 private:
 
     QTextStream *qtin_;
     QTextStream *qtout_;
-    QTcpSocket *socket_;
-    QThread *hilo_captura_;
-    Captura *objeto_captura_;
-
+    Captura *objeto_capturador_;
 
     QString eleccion_;
     QString dispositivo_sel_;
     QString ip_;
     QString puerto_;
 
-    Manejador *handle_;
     QSettings conf_;
     QList<QByteArray> dispositivos_;
 
