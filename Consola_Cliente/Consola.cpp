@@ -4,8 +4,11 @@ Consola::Consola(Captura *Objeto_Capturador,QObject *parent):
     QObject(parent),
     qtout_(NULL),
     objeto_capturador_(Objeto_Capturador),
+    conf_("ficheroConsolaCliente.ini", QSettings::IniFormat),
     qtin_(NULL)
 {
+
+
     qtout_ = new QTextStream(stdout,QIODevice::WriteOnly);
     qtin_ = new QTextStream(stdin,QIODevice::ReadOnly);
 

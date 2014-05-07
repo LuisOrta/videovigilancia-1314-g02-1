@@ -6,12 +6,14 @@ Captura::Captura(QObject *parent):
     QObject(parent),
     cam_(NULL),
     socket_(NULL),
+    conf_("ficheroConsolaCliente.ini", QSettings::IniFormat),
     handle_(NULL),
     buffer_(NULL){
     socket_ = new QTcpSocket(this);
     qtout_ = new QTextStream(stdout,QIODevice::WriteOnly);
     buffer_ = new Captura_Buffer;
     handle_ = new Manejador(this);
+
 
     signal(SIGINT,Manejador::intSignalHandler);
     signal(SIGHUP,Manejador::hupSignalHandler);
