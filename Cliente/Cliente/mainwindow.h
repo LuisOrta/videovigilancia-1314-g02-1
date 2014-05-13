@@ -7,6 +7,10 @@
 #include "QCameraViewfinder"
 #include "capturebuffer.h"
 #include "QTcpSocket"
+#include "opencv2/opencv.hpp"
+#include "cvmatandqimage.h"
+
+
 
 namespace Ui {
 class MainWindow;
@@ -25,6 +29,11 @@ public:
     bool isInicio;
     QTcpSocket *socket;
     int cierre;
+    cv::BackgroundSubtractorMOG2 BGSubstractor;
+    bool enviar;
+    typedef std::vector<cv::Rect> vector_rectangulos;
+    vector_rectangulos r;
+
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -45,6 +54,8 @@ private slots:
     void on_actionCambiar_IP_Puerto_triggered();
 
     void on_actionParar_Captura_triggered();
+
+    QImage detect_mov(cv::Mat);
 
 private:
     Ui::MainWindow *ui;

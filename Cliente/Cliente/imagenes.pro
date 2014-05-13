@@ -61,3 +61,6 @@ unix {          # Esta configuración específica de Linux y UNIX
     config.path = $$CONFDIR
     config.files += ficheroCliente.ini
 }
+
+include(QtOpenCV.pri)
+add_opencv_modules(core video imgproc)

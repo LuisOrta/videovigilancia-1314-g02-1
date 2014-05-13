@@ -31,6 +31,16 @@ public:
     int corrupt_counter;
     QByteArray readbuffer;
     QImage imagebuff;
+    int cont_rect;
+    struct rect{
+      int x;
+      int y;
+      int w;
+      int h;
+    };
+    std::vector<rect> v_rect;
+    u_int32_t n_rec;
+    bool terminado_roi;
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
