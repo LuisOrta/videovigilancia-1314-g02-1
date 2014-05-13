@@ -1,6 +1,8 @@
 #include "Captura.h"
+#include "opencv2/opencv.hpp"
+#include "cvmatandqimage.h"
 
-
+using namespace QtOcv;
 
 Captura::Captura(QObject *parent):
     QObject(parent),
@@ -121,27 +123,97 @@ void Captura::empezar_captura (const QString &ip,const QString &puerto,const QSt
 
 
 }
+QImage Captura::detect_mov(cv::Mat imagen)
+{
+    //DETECTAR MOVIMIENTO
+    enviar = false;
+    typedef std::vector<std::vector<cv::Point> > ContoursType;
+
+
+    cv::Mat foregroundMask;
+    BGSubstractor(imagen, foregroundMask);
+
+
+    for (int i=0;i<10;i++)
+        cv::erode(foregroundMask, foregroundMask, cv::Mat());
+
+    for (int i=0;i<10;i++)
+        cv::dilate(foregroundMask, foregroundMask, cv::Mat());
+
+
+    ContoursType contours;
+    cv::findContours(foregroundMask, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+
+
+
+    //PINTAR CUADROS
+    if(!contours.empty()){
+        for(int i= 0; i< contours.size(); i++){
+            r.push_back(cv::boundingRect(contours[i]));
+            cv::rectangle(imagen, r[i], cvScalar(0, 255, 0, 0));
+            enviar = true;
+        }
+    }
+
+    //CONVERTIR A QIMAGE PARA DEVOLVER
+    QImage imagen_dev;
+    imagen_dev = mat2Image(imagen);
+    return (imagen_dev);
+}
 
 
 void Captura::showFrame(const QImage& rect)
  {
-    // Preguntar a Jesús : creo que falla porque al ser una aplicación de consola no se puede implementar este tipos de objetos que utilizan la pantalla
-       //QPixmap frame;
-       //frame.convertFromImage(rect,Qt::AutoColor);
+    int protocol_version = 1;
 
-       //Envio de la imagen por socket
-       QBuffer buffer;
-       int version = 1;
-       QImageWriter writer(&buffer, "jpeg");
-       writer.setCompression(70);
-       writer.write(rect);
-       int size = buffer.data().size();
-        if (socket_->isValid())
-        {
+    QImage imagen_dm;
+    cv::Mat mat_img;
+    mat_img = image2Mat(rect);
+    imagen_dm = detect_mov(mat_img);
+
+
+    //Envio de la imagen por socket
+    QBuffer buffer;
+    QImageWriter writer(&buffer, "jpeg");
+    writer.setCompression(70);
+    writer.write(imagen_dm);
+    qDebug() << QByteArray::number(buffer.data().size());
+    int size = buffer.data().size();
+    socket_->read(reinterpret_cast<char*>(&cierre), 4);
+    if (cierre == 202){
+        qDebug() << "DESCONECTADO";
+        socket_->disconnectFromHost();
+    }
+    else{
+        if(enviar){
+            qDebug() << "ENVIANDO";
+            int tam_vrec = r.size();
+
             socket_->write(reinterpret_cast<char*>(&size), 4);
-            socket_->write(reinterpret_cast<char*>(&version), 4);
+            socket_->write(reinterpret_cast<char*>(&protocol_version), 4);
+            socket_->write(reinterpret_cast<char*>(&tam_vrec), 4);
+            while(!r.empty()){
+                int x = r.back().x;
+                int y = r.back().y;
+                int w = r.back().width;
+                int h = r.back().height;
+
+                r.pop_back();
+
+                socket_->write(reinterpret_cast<char*>(&x), 4);
+                socket_->write(reinterpret_cast<char*>(&y), 4);
+                socket_->write(reinterpret_cast<char*>(&w), 4);
+                socket_->write(reinterpret_cast<char*>(&h), 4);
+                qDebug() << x;
+                qDebug() << y;
+                qDebug() << w;
+                qDebug() << h;
+            }
+
             socket_->write(buffer.data());
-         }
+        }
+        else qDebug() << "NO ENVIADO";
+    }
 
  }
 void  Captura::terminar_captura(void)

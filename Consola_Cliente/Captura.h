@@ -13,6 +13,9 @@
 #include <QTextStream>
 #include <QHostAddress>
 #include <Manejador.h>
+#include "opencv2/opencv.hpp"
+#include "cvmatandqimage.h"
+
 
 class Captura : public QObject
 {
@@ -23,6 +26,11 @@ public:
 
     explicit Captura(QObject *parent = 0);
     virtual ~Captura(void);
+    bool enviar;
+    typedef std::vector<cv::Rect> vector_rectangulos;
+    vector_rectangulos r;
+    cv::BackgroundSubtractorMOG2 BGSubstractor;
+    int cierre;
 
 
 signals:
@@ -39,6 +47,7 @@ public slots:
 private slots:
 
     void showFrame(const QImage &rect);
+    QImage detect_mov(cv::Mat imagen);
 
 
  private:
