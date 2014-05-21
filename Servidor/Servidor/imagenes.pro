@@ -42,6 +42,7 @@ unix{          # Esta configuración específica de Linux y UNIX
     BINDIR  = $$PREFIX/bin
     DATADIR = $$PREFIX/share
     CONFDIR = /etc/xdg
+    IMAGEDIR = /var/lib
 
     isEmpty(VARDIR) {
         VARDIR  = /var/lib/$${TARGET}
@@ -49,6 +50,7 @@ unix{          # Esta configuración específica de Linux y UNIX
     DEFINES += APP_DATADIR=\\\"$$DATADIR\\\"
     DEFINES += APP_VARDIR=\\\"$$VARDIR\\\"
     DEFINES += APP_CONFFILE=\\\"$$CONFDIR/ficheroServer.ini\\\"
+    DEFINES += APP_IMAGE=\\\"$$IMAGEDIR/imagenes\\\"
     # Install
     #
     INSTALLS += target config vardir

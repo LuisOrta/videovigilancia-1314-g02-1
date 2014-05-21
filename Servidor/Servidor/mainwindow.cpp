@@ -30,6 +30,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->checkBox->setChecked(sett.value("Autorun", true).toBool());
 
+    if(sett.value("Contador").toInt()!=0)
+        contador_ = sett.value("Contador").toInt();
+
+    else
+        contador_ = 0;
+
+     qDebug()<<"Contador";
+     qDebug()<<contador_;
     devices = QCamera::availableDevices();
     cam = new QCamera();
     isInicio = true;
@@ -130,6 +138,7 @@ void MainWindow::escucha()
 
 void MainWindow::leerDatos()
 {
+     QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     u_int32_t cerrar = 202;
     QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(sender());
     if (!clientConnection)
@@ -244,14 +253,32 @@ void MainWindow::leerDatos()
             }
 
             if(readbuffer.length() == buffsize){
-                 QFile file("imagenCargada.jpg");
-                 file.open(QIODevice::WriteOnly);
+
+                 qDebug()<<"Contadooor";
+                 qDebug()<<contador_;
+                 QString hex("%1");
+                 QString hex2 = hex.arg(contador_, 20, 16, QLatin1Char('0'));
+                 QString ruta1 = hex2.left(4);
+                 QString ruta2 = hex2.mid(5,4);
+                 ruta_.mkdir(ruta1);
+                 ruta_.mkdir(ruta1+"/"+ruta2);
+                 QString aux = APP_IMAGE;
+                 qDebug()<<aux+"/"+ruta1+"/"+ruta2+"/"+hex2;
+
+                 QFile file(aux+"/"+ruta1+"/"+ruta2+"/"+hex2);
+                 contador_++;
+                 sett.setValue("Contador", contador_);
+                 bool prueba = file.open(QIODevice::WriteOnly);
+                 if(!prueba){
+                     qDebug()<<"Error al abrir la imagen";
+                     return;
+
+                 }
                  file.write(readbuffer, buffsize);
                  bool carga = imagebuff.loadFromData(readbuffer.data(), "jpeg");
 
                  /*-------------------------------------------------------*/
                  /*FUNCION DE ALMACENAR METADATOS (STD::VECTOR)*/
-                 /*VACIAR EL VECTOR EN LA FUNCION CUANDO SE TENGA*/
                  almacenar_metadatos(n_camara,v_rect);
                  while(!v_rect.empty()){
                     v_rect.pop_back();

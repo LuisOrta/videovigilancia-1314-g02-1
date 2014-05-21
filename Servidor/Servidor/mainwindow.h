@@ -10,7 +10,8 @@
 #include "QTcpSocket"
 #include "QList"
 #include "QtSql/QSqlDatabase"
-
+#include "QSettings"
+#include "QDir"
 
 namespace Ui {
 class MainWindow;
@@ -38,6 +39,9 @@ public:
     QImage imagebuff;
     QSqlDatabase db;
     int cont_rect;
+    int contador_;
+    QSettings cont_;
+    QDir ruta_;
     struct rect{
       int x;
       int y;
