@@ -48,9 +48,16 @@ int main(int argc, char *argv[])
     umask(0);
     QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     QString cadena = sett.value("Usuario_efectivo","Visord").toString();
+    struct stat st;
     FILE *fichero_demonio;
 
 
+    if(stat(FICHERO_PID,&st) == 0)
+    {
+        syslog(LOG_ERR,"Ya existe un proceso igual cargado");
+        exit(11);
+
+    }
     fichero_demonio = fopen(FICHERO_PID,"w");
     if(fichero_demonio == NULL)
      {
