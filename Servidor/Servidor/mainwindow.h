@@ -42,6 +42,7 @@ public:
     int contador_;
     QSettings cont_;
     QDir ruta_;
+    QString aux;
     struct rect{
       int x;
       int y;

@@ -54,8 +54,9 @@ MainWindow::MainWindow(QWidget *parent) :
       server->listen(QHostAddress::Any,sett.value("IPPort", 15000).toInt());
       connect(server, SIGNAL(newConnection()), this, SLOT(escucha()));
     }
+      aux = APP_IMAGE;
       db = QSqlDatabase::addDatabase("QSQLITE");
-      db.setDatabaseName("data.sqlite");
+      db.setDatabaseName(aux+"/data.sqlite");
       db.open();
 
 }
@@ -260,9 +261,10 @@ void MainWindow::leerDatos()
                  QString hex2 = hex.arg(contador_, 20, 16, QLatin1Char('0'));
                  QString ruta1 = hex2.left(4);
                  QString ruta2 = hex2.mid(5,4);
-                 ruta_.mkdir(ruta1);
-                 ruta_.mkdir(ruta1+"/"+ruta2);
-                 QString aux = APP_IMAGE;
+
+                 ruta_.mkdir(aux+"/"+ruta1);
+                 ruta_.mkdir(aux+"/"+ruta1+"/"+ruta2);
+
                  qDebug()<<aux+"/"+ruta1+"/"+ruta2+"/"+hex2;
 
                  QFile file(aux+"/"+ruta1+"/"+ruta2+"/"+hex2);
@@ -371,6 +373,10 @@ void MainWindow::almacenar_metadatos(int nombre, std::vector<rect> metadatos)
 
 
    QSqlQuery query(db);
+
+   query.exec("PRAGMA [data.sqlite.]synchronous = NORMAL");
+   query.exec("PRAGMA [data.sqlite.]journal_mode = MEMORY");
+
    query.exec("CREATE TABLE IF NOT EXISTS image"
               "(id INTEGER PRIMARY KEY AUTOINCREMENT,"
               "name VARCHAR(50),"
