@@ -106,7 +106,6 @@ void Manejador::handleSigHup()
     sigHupNotifier->setEnabled(false);
     char tmp;
     ::read(sigHupFd[1], &tmp, sizeof(tmp));
-
     emit reiniciar();
     sigHupNotifier->setEnabled(true);
 

@@ -38,6 +38,7 @@ Servidor::~Servidor()
         qDeleteAll(clientConnections_);
 
     }
+    readbuffer_.clear();
     delete server_;
     delete handle_;
     server_ = NULL;
@@ -58,6 +59,7 @@ void Servidor::escucha()
 }
 void Servidor::leerDatos()
 {
+
     u_int32_t cerrar = 202;
     QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(sender());
     if (!clientConnection)
@@ -73,35 +75,44 @@ void Servidor::leerDatos()
                 qDebug() << buffsize_;
             }
             if (buffsize_ > 50000 || buffsize_ == 1){
-                if(clientConnection->isWritable())
+                if(clientConnection->state() == QTcpSocket::ConnectedState)
                 {
-                    clientConnection->write(reinterpret_cast<char*>(&cerrar), sizeof(cerrar));
+                    if(clientConnection->isWritable())
+                    {
+                     clientConnection->write(reinterpret_cast<char*>(&cerrar), sizeof(cerrar));
+                    }
+                    clientConnection->disconnectFromHost();
+                    //clientConnection->abort();
+                    readbuffer_.clear();
+                    buffsize_ = 0;
+                    protocol_version_ = 0;
+                    n_rec_ = 0;
+                    terminado_roi_ = false;
+                    n_camara_ = 0;
+                    return;
+
                 }
-                clientConnection->disconnectFromHost();
-                readbuffer_.clear();
-                buffsize_ = 0;
-                cont_rect_ = 0;
-                protocol_version_ = 0;
-                n_rec_ = 0;
-                terminado_roi_ = false;
-                n_camara_ = 0;
-                return;
             }
          }
 
         while (protocol_version_ == 0){
+            qDebug() << " ERROR INFINITO " << endl;
             if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 && protocol_version_ == 0){ //VERSION
                 clientConnection->read(reinterpret_cast<char*>(&protocol_version_), sizeof(protocol_version_));
                 protocol_version_ = qToLittleEndian(protocol_version_);
                 qDebug() << "VERSION!";
                 qDebug() << protocol_version_;
                 if (protocol_version_ != VERSION){
-                    if(clientConnection->isWritable())
+                    if(clientConnection->state() == QTcpSocket::ConnectedState)
                     {
-                        clientConnection->write(reinterpret_cast<char*>(&cerrar), sizeof(cerrar));
+                        if(clientConnection->isWritable())
+                        {
+                         clientConnection->write(reinterpret_cast<char*>(&cerrar), sizeof(cerrar));
+                        }
+                       clientConnection->disconnectFromHost();
                     }
-                    clientConnection->disconnectFromHost();
                 }
+
             }
           }
 
@@ -127,8 +138,8 @@ void Servidor::leerDatos()
 
 
         while(cont_rect_ < n_rec_ && terminado_roi_ == false){
-            qDebug() << "N_ROIS!";
-            if (clientConnection != NULL && clientConnection->bytesAvailable()>=16){
+            qDebug() << "N_ROI!";
+            if (clientConnection != NULL  && clientConnection->bytesAvailable()>=16){
                 rect aux_rect;
                 clientConnection->read(reinterpret_cast<char*>(&aux_rect.x), sizeof(aux_rect.x));
                 aux_rect.x= qToLittleEndian(aux_rect.x);
@@ -166,20 +177,23 @@ void Servidor::leerDatos()
                  QFile file("imagenCargada.jpg");
                  file.open(QIODevice::WriteOnly);
                  file.write(readbuffer_, buffsize_);
-                 file.close();
+                 bool carga = imagebuff_.loadFromData(readbuffer_.data(), "jpeg");
 
                  /*-------------------------------------------------------*/
                  /*FUNCION DE ALMACENAR METADATOS (STD::VECTOR)*/
                  /*VACIAR EL VECTOR EN LA FUNCION CUANDO SE TENGA*/
+                 almacenar_metadatos(n_camara_,v_rect_);
                  while(!v_rect_.empty()){
                     v_rect_.pop_back();
                  }
-
+                 /*-------------------------------------------------------*/
+                 //showFrame(imagebuff);
                  readbuffer_.clear();
                  buffsize_ = 0;
                  protocol_version_ = 0;
                  n_rec_ = 0;
                  terminado_roi_ = false;
+                 n_camara_ = 0;
 
             }
         }
@@ -192,11 +206,11 @@ void Servidor::clienteDesconectado()
     QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(sender());
     if (!clientConnection)
         return;
-    clientConnections_.removeAll(clientConnection);
+
     readbuffer_.clear();
     qDebug() << "ENTRO";
     clientConnection->deleteLater();
-
+    clientConnections_.removeAll(clientConnection);
 }
 void Servidor::reiniciar()
 {
@@ -213,6 +227,7 @@ void Servidor::reiniciar()
     n_camara_ = 0;
     terminado_roi_ = false;
     escucha();
+    syslog(LOG_NOTICE," DEMONIO REINICIADO ");
 
 }
 void Servidor::cerrar()
@@ -223,6 +238,20 @@ void Servidor::cerrar()
         server_->close();
         qDeleteAll(clientConnections_);
         readbuffer_.clear();
+        buffsize_ = 0;
+        corrupt_counter_ = 0;
+        cont_rect_ = 0;
+        protocol_version_ = 0;
+        n_rec_ = 0;
+        terminado_roi_ = false;
+        n_camara_ = 0;
+      }
+    syslog(LOG_NOTICE," DEMONIO DETENIDO ");
+    FILE *fichero_demonio;
+    fichero_demonio = fopen(FICHERO_PID,"r");
+    if(fichero_demonio != NULL)
+     {
+       unlink(FICHERO_PID);
     }
     exit(0);
 }
@@ -238,6 +267,11 @@ void Servidor::almacenar_metadatos(int nombre, std::vector<rect> metadatos)
 
 
    QSqlQuery query(db_);
+
+   query.exec("PRAGMA [data.sqlite.]synchronous = NORMAL");
+   query.exec("PRAGMA [data.sqlite.]journal_mode = MEMORY");
+
+
    query.exec("CREATE TABLE IF NOT EXISTS image"
               "(id INTEGER PRIMARY KEY AUTOINCREMENT,"
               "name VARCHAR(50),"

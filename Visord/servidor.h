@@ -14,7 +14,10 @@
 #include "QtSql/QSqlDatabase"
 #include "QtSql/qsqlquery.h"
 #include "QDateTime"
-
+#include "QImage"
+#include <syslog.h>
+#include <stdio.h>
+#define FICHERO_PID "/var/run/Visord.pid"
 #define VERSION 1
 
 
@@ -39,7 +42,7 @@ private:
 
     QList <QTcpSocket *> clientConnections_;
     QByteArray readbuffer_;
-
+    QImage imagebuff_;
     u_int32_t buffsize_;
     u_int32_t protocol_version_;
     u_int32_t n_rec_;
