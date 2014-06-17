@@ -45,7 +45,8 @@ public:
         // Aquí el código que manipula frameAsImage...
 
         //Mostrar imagen
-        emit mostrar(frameAsImage);
+        if(!frameAsImage.isNull())
+            emit mostrar(frameAsImage);
 
         frame2.unmap();
         return true;

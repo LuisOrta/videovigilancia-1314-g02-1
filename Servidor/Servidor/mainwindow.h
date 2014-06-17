@@ -10,8 +10,7 @@
 #include "QTcpSocket"
 #include "QList"
 #include "QtSql/QSqlDatabase"
-#include "QSettings"
-#include "QDir"
+#include "QHash"
 
 namespace Ui {
 class MainWindow;
@@ -31,27 +30,31 @@ public:
     QTcpServer *server;
     //QTcpSocket *clientConnection;
     QList <QTcpSocket *> clientConnections;
-    u_int32_t buffsize;
-    u_int32_t protocol_version;
     int corrupt_counter;
-    int n_camara;
-    QByteArray readbuffer;
     QImage imagebuff;
     QSqlDatabase db;
-    int cont_rect;
-    int contador_;
-    QSettings cont_;
-    QDir ruta_;
-    QString aux;
     struct rect{
       int x;
       int y;
       int w;
       int h;
     };
-    std::vector<rect> v_rect;
-    u_int32_t n_rec;
-    bool terminado_roi;
+    struct flags_protocols{
+
+        u_int32_t buffsize;
+        u_int32_t protocol_version;
+
+        int n_camara;
+        QByteArray readbuffer;
+        int cont_rect;
+        std::vector<rect> v_rect;
+        u_int32_t n_rec;
+        bool terminado_roi;
+    };
+
+    QHash <QTcpSocket *,flags_protocols> hash_clientsconnections;
+
+
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 

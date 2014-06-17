@@ -30,33 +30,18 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->checkBox->setChecked(sett.value("Autorun", true).toBool());
 
-    if(sett.value("Contador").toInt()!=0)
-        contador_ = sett.value("Contador").toInt();
-
-    else
-        contador_ = 0;
-
-     qDebug()<<"Contador";
-     qDebug()<<contador_;
     devices = QCamera::availableDevices();
     cam = new QCamera();
+
     isInicio = true;
-    buffsize = 0;
-    corrupt_counter = 0;
-    cont_rect = 0;
-    protocol_version = 0;
-    n_rec = 0;
-    terminado_roi = false;
-    n_camara = 0;
     server = new QTcpServer(this);
     if(sett.value("Autorun",true).toBool()==true)
     {
       server->listen(QHostAddress::Any,sett.value("IPPort", 15000).toInt());
       connect(server, SIGNAL(newConnection()), this, SLOT(escucha()));
     }
-      aux = APP_IMAGE;
       db = QSqlDatabase::addDatabase("QSQLITE");
-      db.setDatabaseName(aux+"/data.sqlite");
+      db.setDatabaseName("data.sqlite");
       db.open();
 
 }
@@ -139,22 +124,36 @@ void MainWindow::escucha()
 
 void MainWindow::leerDatos()
 {
-     QSettings sett("ficheroServer.ini", QSettings::IniFormat);
     u_int32_t cerrar = 202;
     QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(sender());
     if (!clientConnection)
         return;
 
+    if(!hash_clientsconnections.contains(clientConnection))
+    {
+        flags_protocols estructura_flags;
+        estructura_flags.buffsize = 0;
+        estructura_flags.cont_rect = 0;
+        estructura_flags.n_camara = 0;
+        estructura_flags.n_rec = 0;
+        estructura_flags.protocol_version = 0;
+        estructura_flags.terminado_roi = false;
+        hash_clientsconnections.insert(clientConnection,estructura_flags);
+    }
+
+
     qDebug() << "LEYENDO DATOS!";
     while(clientConnection != NULL && clientConnection->bytesAvailable()>=4){
-        if (buffsize == 0){
+        if (hash_clientsconnections[clientConnection].buffsize == 0){
             if (clientConnection->bytesAvailable()>=4){//TAMAÑO
+                u_int32_t buffsize = 0;
                 clientConnection->read(reinterpret_cast<char*>(&buffsize), sizeof(buffsize));
                 buffsize = qToLittleEndian(buffsize);
+                hash_clientsconnections[clientConnection].buffsize = buffsize;
                 qDebug() << "LEYENDO TAMAÑO!";
                 qDebug() << buffsize;
             }
-            if (buffsize > 50000 || buffsize == 1){
+            if ( hash_clientsconnections[clientConnection].buffsize  > 50000 || hash_clientsconnections[clientConnection].buffsize == 1){
                 if(clientConnection->state() == QTcpSocket::ConnectedState)
                 {
                     if(clientConnection->isWritable())
@@ -163,23 +162,24 @@ void MainWindow::leerDatos()
                     }
                     clientConnection->disconnectFromHost();
                     //clientConnection->abort();
-                    readbuffer.clear();
-                    buffsize = 0;
-                    protocol_version = 0;
-                    n_rec = 0;
-                    terminado_roi = false;
-                    n_camara = 0;
+                     hash_clientsconnections[clientConnection].readbuffer.clear();
+                     hash_clientsconnections[clientConnection].buffsize = 0;
+                     hash_clientsconnections[clientConnection].protocol_version = 0;
+                     hash_clientsconnections[clientConnection].n_rec = 0;
+                     hash_clientsconnections[clientConnection].terminado_roi = false;
+                     hash_clientsconnections[clientConnection].n_camara = 0;
                     return;
 
                 }
             }
          }
 
-        while (protocol_version == 0){
-            qDebug() << " ERROR INFINITO " << endl;
-            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 && protocol_version == 0){ //VERSION
+        while ( hash_clientsconnections[clientConnection].protocol_version == 0){
+            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 &&  hash_clientsconnections[clientConnection].protocol_version == 0){ //VERSION
+                u_int32_t protocol_version = 0;
                 clientConnection->read(reinterpret_cast<char*>(&protocol_version), sizeof(protocol_version));
                 protocol_version = qToLittleEndian(protocol_version);
+                hash_clientsconnections[clientConnection].protocol_version = protocol_version;
                 qDebug() << "VERSION!";
                 qDebug() << protocol_version;
                 if (protocol_version != VERSION){
@@ -197,27 +197,31 @@ void MainWindow::leerDatos()
           }
 
 
-        while (n_camara == 0){
-            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 && n_camara == 0){ //NUMERO DE CAMARA
+        while ( hash_clientsconnections[clientConnection].n_camara == 0){
+            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 &&  hash_clientsconnections[clientConnection].n_camara == 0){ //NUMERO DE CAMARA
+                int n_camara;
                 clientConnection->read(reinterpret_cast<char*>(&n_camara), sizeof(n_camara));
                 n_camara = qToLittleEndian(n_camara );
+                 hash_clientsconnections[clientConnection].n_camara = n_camara;
                 qDebug() << "ID de CAMARA!";
                 qDebug() << n_camara;
             }
           }
 
 
-        while (n_rec == 0){
-            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 && n_rec == 0){ //NUMERO DE RECTANGULOS
+        while ( hash_clientsconnections[clientConnection].n_rec == 0){
+            if (clientConnection != NULL && clientConnection->bytesAvailable()>=4 &&  hash_clientsconnections[clientConnection].n_rec == 0){ //NUMERO DE RECTANGULOS
+                u_int32_t n_rec;
                 clientConnection->read(reinterpret_cast<char*>(&n_rec), sizeof(n_rec));
                 n_rec= qToLittleEndian(n_rec);
+                 hash_clientsconnections[clientConnection].n_rec = n_rec;
                 qDebug() << "N de RECTANGULOS";
                 qDebug() << n_rec;
             }
         }
 
 
-        while(cont_rect < n_rec && terminado_roi == false){
+        while( hash_clientsconnections[clientConnection].cont_rect <  hash_clientsconnections[clientConnection].n_rec &&  hash_clientsconnections[clientConnection].terminado_roi == false){
             qDebug() << "N_ROI!";
             if (clientConnection != NULL  && clientConnection->bytesAvailable()>=16){
                 rect aux_rect;
@@ -237,62 +241,43 @@ void MainWindow::leerDatos()
                 aux_rect.h= qToLittleEndian(aux_rect.h);
                 qDebug() << aux_rect.h;
 
-                v_rect.push_back(aux_rect);
+                 hash_clientsconnections[clientConnection].v_rect.push_back(aux_rect);
 
-                cont_rect++;
+                 hash_clientsconnections[clientConnection].cont_rect++;
             }
 
         }
-        cont_rect = 0;
-        terminado_roi = true;
+         hash_clientsconnections[clientConnection].cont_rect = 0;
+         hash_clientsconnections[clientConnection].terminado_roi = true;
 
-        while(readbuffer.length() < buffsize && clientConnection != NULL && clientConnection->bytesAvailable()>0){
-            if (readbuffer.length() < buffsize){
-                 readbuffer.append(clientConnection->read(buffsize - readbuffer.length()));
+        while( hash_clientsconnections[clientConnection].readbuffer.length() <  hash_clientsconnections[clientConnection].buffsize && clientConnection != NULL && clientConnection->bytesAvailable()>0){
+            if ( hash_clientsconnections[clientConnection].readbuffer.length() <  hash_clientsconnections[clientConnection].buffsize){
+                  hash_clientsconnections[clientConnection].readbuffer.append(clientConnection->read( hash_clientsconnections[clientConnection].buffsize -  hash_clientsconnections[clientConnection].readbuffer.length()));
                  qDebug() << "TAMAÑO BUFFER!";
-                 qDebug() << readbuffer.length();
+                 qDebug() <<  hash_clientsconnections[clientConnection].readbuffer.length();
             }
 
-            if(readbuffer.length() == buffsize){
-
-                 qDebug()<<"Contadooor";
-                 qDebug()<<contador_;
-                 QString hex("%1");
-                 QString hex2 = hex.arg(contador_, 20, 16, QLatin1Char('0'));
-                 QString ruta1 = hex2.left(4);
-                 QString ruta2 = hex2.mid(5,4);
-
-                 ruta_.mkdir(aux+"/"+ruta1);
-                 ruta_.mkdir(aux+"/"+ruta1+"/"+ruta2);
-
-                 qDebug()<<aux+"/"+ruta1+"/"+ruta2+"/"+hex2;
-
-                 QFile file(aux+"/"+ruta1+"/"+ruta2+"/"+hex2);
-                 contador_++;
-                 sett.setValue("Contador", contador_);
-                 bool prueba = file.open(QIODevice::WriteOnly);
-                 if(!prueba){
-                     qDebug()<<"Error al abrir la imagen";
-                     return;
-
-                 }
-                 file.write(readbuffer, buffsize);
-                 bool carga = imagebuff.loadFromData(readbuffer.data(), "jpeg");
+            if( hash_clientsconnections[clientConnection].readbuffer.length() ==  hash_clientsconnections[clientConnection].buffsize){
+                 QFile file("imagenCargada.jpg");
+                 file.open(QIODevice::WriteOnly);
+                 file.write( hash_clientsconnections[clientConnection].readbuffer,  hash_clientsconnections[clientConnection].buffsize);
+                 bool carga = imagebuff.loadFromData( hash_clientsconnections[clientConnection].readbuffer.data(), "jpeg");
 
                  /*-------------------------------------------------------*/
                  /*FUNCION DE ALMACENAR METADATOS (STD::VECTOR)*/
-                 almacenar_metadatos(n_camara,v_rect);
-                 while(!v_rect.empty()){
-                    v_rect.pop_back();
+                 /*VACIAR EL VECTOR EN LA FUNCION CUANDO SE TENGA*/
+                 almacenar_metadatos( hash_clientsconnections[clientConnection].n_camara, hash_clientsconnections[clientConnection].v_rect);
+                 while(!hash_clientsconnections[clientConnection].v_rect.empty()){
+                     hash_clientsconnections[clientConnection].v_rect.pop_back();
                  }
                  /*-------------------------------------------------------*/
                  //showFrame(imagebuff);
-                 readbuffer.clear();
-                 buffsize = 0;
-                 protocol_version = 0;
-                 n_rec = 0;
-                 terminado_roi = false;
-                 n_camara = 0;
+                  hash_clientsconnections[clientConnection].readbuffer.clear();
+                  hash_clientsconnections[clientConnection].buffsize = 0;
+                  hash_clientsconnections[clientConnection].protocol_version = 0;
+                  hash_clientsconnections[clientConnection].n_rec = 0;
+                  hash_clientsconnections[clientConnection].terminado_roi = false;
+                  hash_clientsconnections[clientConnection].n_camara = 0;
 
             }
         }
@@ -323,8 +308,8 @@ void MainWindow:: clienteDesconectado()
 
      clientConnections.removeAll(clientConnection);
      clientConnection->deleteLater();
-     readbuffer.clear();
-     //qDebug() << "ENTRO";
+      hash_clientsconnections[clientConnection].readbuffer.clear();
+
 
 }
 
@@ -335,15 +320,8 @@ void MainWindow::on_actionTerminar_Servidor_triggered()
 
         server->close();
         qDeleteAll(clientConnections);
-        readbuffer.clear();
-        isInicio = true;
-        buffsize = 0;
-        corrupt_counter = 0;
-        cont_rect = 0;
-        protocol_version = 0;
-        n_rec = 0;
-        terminado_roi = false;
-        n_camara = 0;
+        hash_clientsconnections.clear();
+
     }
 
 

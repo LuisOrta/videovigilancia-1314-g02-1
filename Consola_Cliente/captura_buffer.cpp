@@ -27,9 +27,10 @@ bool Captura_Buffer::present(const QVideoFrame &frame)
     QVideoFrame a = frame;
     a.map(QAbstractVideoBuffer::ReadOnly);
     QImage frameAsImage = QImage(frame.bits(), frame.width(),
-        frame.height(), frame.bytesPerLine(),
-        QVideoFrame::imageFormatFromPixelFormat(frame.pixelFormat()));
-    emit mostrar_marco(frameAsImage);
+    frame.height(), frame.bytesPerLine(),
+    QVideoFrame::imageFormatFromPixelFormat(frame.pixelFormat()));
+    if(!frameAsImage.isNull())
+        emit mostrar_marco(frameAsImage);
     a.unmap();
 
     return true;
