@@ -17,6 +17,7 @@
 #include "QImage"
 #include <syslog.h>
 #include <stdio.h>
+#include <QHash>
 #define FICHERO_PID "/var/run/Visord.pid"
 #define VERSION 1
 
@@ -37,19 +38,27 @@ private:
       int w;
       int h;
     };
+    struct flags_protocols{
+
+        u_int32_t buffsize_;
+        u_int32_t protocol_version_;
+        u_int32_t n_rec_;
+        int n_camara_;
+        QByteArray readbuffer_;
+        int cont_rect_;
+        std::vector<rect> v_rect_;
+        bool terminado_roi_;
+    };
+    QHash <QTcpSocket *,flags_protocols> hash_clientsconnections;
     QTcpServer *server_;
     Manejador *handle_;
 
     QList <QTcpSocket *> clientConnections_;
-    QByteArray readbuffer_;
+
     QImage imagebuff_;
-    u_int32_t buffsize_;
-    u_int32_t protocol_version_;
-    u_int32_t n_rec_;
-    bool terminado_roi_;
     int corrupt_counter_;
     int cont_rect_;
-    int n_camara_;
+
     QSqlDatabase db_;
     std::vector<rect> v_rect_;
 
